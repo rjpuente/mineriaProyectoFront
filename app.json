@@ -1,0 +1,16 @@
+{
+    "expo": {
+      "name": "appejemplo",
+      "version": "1.0.0",
+      "extra": {
+        "webpackConfig": "./webpack.config.js"
+      },
+      "web": {
+        "cors": {
+          "origin": ["*"],
+          "credentials": true
+        }
+      }
+    }
+  }
+  

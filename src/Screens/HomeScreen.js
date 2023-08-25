@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Button } from "react-native";
 import CameraList from '../components/CameraList';
 
 const HomeScreen = ({ navigation }) => {
@@ -13,6 +13,10 @@ const HomeScreen = ({ navigation }) => {
     <View>
       <Text>Camera List</Text>
       <CameraList cameras={cameras} navigation={navigation} />
+      <Button
+        title="Connect to Camera"
+        onPress={() => navigation.navigate('Connect')} // Navegar a la pantalla de conexión
+      />
     </View>
   );
 };
