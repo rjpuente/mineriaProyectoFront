@@ -57,7 +57,7 @@ const CameraConnectScreen = () => {
       {!connected ? (
         <View style={styles.formContainer}>
           <Picker
-            style={[styles.picker, styles.input]} // Agregamos los estilos del input al Picker
+            style={[styles.picker, styles.input]}
             selectedValue={selectedDevice}
             onValueChange={(value) => setSelectedDevice(value)}
           >

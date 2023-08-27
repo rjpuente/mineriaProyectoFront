@@ -15,7 +15,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleRegisterPress = () => {
-    navigation.navigate('Register'); // Navegar a la pantalla Register
+    navigation.navigate('Register');
   };
 
   return (

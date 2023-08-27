@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants';
 
-const HomeScreen = () => {
+const HomeScreen = ({}) => {
   const navigation = useNavigation();
 
   return (
@@ -11,7 +11,7 @@ const HomeScreen = () => {
       <Text style={styles.title}>Lista de Cámaras</Text>
       <TouchableOpacity
         style={styles.connectButton}
-        onPress={() => navigation.navigate('Connect')} // Navegar a la pantalla de conexión
+        onPress={() => navigation.navigate('Connect')}
       >
         <Text style={styles.buttonText}>Conectar con Cámara</Text>
       </TouchableOpacity>
