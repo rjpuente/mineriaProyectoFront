@@ -32,7 +32,8 @@
         "react-native-vector-icons": "^9.2.0",
         "react-native-video": "^5.2.1",
         "react-native-web": "~0.18.10",
-        "react-webcam": "^7.1.1"
+        "react-webcam": "^7.1.1",
+        "socket.io-client": "4.7.2"
     },
     "devDependencies": {
         "@babel/core": "^7.20.0"
