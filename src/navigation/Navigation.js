@@ -5,7 +5,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
-import CameraConnectScreen from '../screens/CameraConnectScreen';
 import CameraDetailsScreen from '../screens/CameraDetailsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -29,10 +28,6 @@ const MainScreenStack = () => {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-      />
-      <Tab.Screen
-        name="Connect"
-        component={CameraConnectScreen}
       />
       <Tab.Screen
         name="CameraDetails"
