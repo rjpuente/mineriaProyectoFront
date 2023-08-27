@@ -1,12 +1,22 @@
-import React, { useState } from "react";
-import { View, TextInput, Button } from "react-native";
+import React, { useState, useEffect } from "react";
+import Webcam from "react-webcam";
+import { View, Button, Picker } from "react-native";
 
 const CameraConnectScreen = () => {
-  const [cameraIp, setCameraIp] = useState("");
   const [connected, setConnected] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState("");
+
+  useEffect(() => {
+    // Obtener la lista de dispositivos de entrada disponibles
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const cameras = devices.filter((device) => device.kind === "videoinput");
+      setDevices(cameras);
+    });
+  }, []);
 
   const handleConnect = () => {
-    // Conectar a la cámara agregando "/video" a la URL
+    // Conectar a la cámara seleccionada
     setConnected(true);
   };
 
@@ -14,23 +24,28 @@ const CameraConnectScreen = () => {
     <View>
       {!connected ? (
         <View>
-          <TextInput
-            placeholder="Ingrese la IP de la cámara"
-            value={cameraIp}
-            onChangeText={setCameraIp}
+          <Picker
+            selectedValue={selectedDevice}
+            onValueChange={(value) => setSelectedDevice(value)}
+          >
+            <Picker.Item label="Seleccionar cámara" value="" />
+            {devices.map((device) => (
+              <Picker.Item
+                key={device.deviceId}
+                label={device.label || `Cámara ${device.deviceId}`}
+                value={device.deviceId}
+              />
+            ))}
+          </Picker>
+          <Button
+            title="Conectar a la cámara"
+            onPress={handleConnect}
+            disabled={!selectedDevice}
           />
-          <Button title="Conectar" onPress={handleConnect} />
         </View>
       ) : (
         <View>
-          <video autoPlay controls>
-            <source
-              src={`http://${cameraIp}:4747/video`}
-              type="video/mp4"
-              crossOrigin="anonymous"
-            />
-            Su navegador no admite la etiqueta de video.
-          </video>
+          <Webcam audio={false} videoConstraints={{ deviceId: selectedDevice }} />
         </View>
       )}
     </View>
