@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
-import { View, Button, Picker } from "react-native";
+import { View, Picker, Button, StyleSheet } from "react-native";
 import io from "socket.io-client";
 
 const CameraConnectScreen = () => {
@@ -8,46 +8,67 @@ const CameraConnectScreen = () => {
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
+  const [imageSrc, setImageSrc] = useState("");
 
-  const webcamRef = useRef(null); // Referencia a la webcam
+  const webcamRef = useRef(null);
 
   useEffect(() => {
-    // Obtener la lista de dispositivos de entrada disponibles
     navigator.mediaDevices.enumerateDevices().then((devices) => {
       const cameras = devices.filter((device) => device.kind === "videoinput");
       setDevices(cameras);
     });
   }, []);
 
-  const handleConnect = () => {
-    // Conectar a la cámara seleccionada
-    setConnected(true);
+  useEffect(() => {
+    if (socket) {
+      const imageSendingInterval = setInterval(() => {
+        handleSendImage();
+      }, 5000);
 
-    // Establecer la conexión WebSocket
-    const newSocket = io("http://localhost:5000"); // Cambia la URL a tu backend
-    setSocket(newSocket);
-  };
+      return () => {
+        clearInterval(imageSendingInterval);
+      };
+    }
+  }, [socket]);
 
   useEffect(() => {
     if (socket) {
-      // Escuchar eventos desde el backend
-      socket.on("prediction", (prediction) => {
-        console.log("Prediction received:", prediction);
-        // Aquí puedes mostrar la notificación o realizar otras acciones según la predicción
-      });
-
-      socket.on("error", (error) => {
-        console.error("Error received:", error);
+      // Manejar el evento de predicción recibida
+      socket.on("prediction", (response) => {
+        console.log("Prediction received:", response); // Mostrar la predicción por consola
       });
     }
   }, [socket]);
 
-  const handleSendImage = () => {
-    if (socket && selectedDevice && webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
+  const handleConnect = () => {
+    setConnected(true);
+    const newSocket = io("http://localhost:5000");
+    setSocket(newSocket);
+    console.log("Connected successfully", newSocket);
+  };
 
-      // Enviar la imagen al backend a través del socket
-      socket.emit("image", imageSrc);
+  const handleSendImage = () => {
+    console.log("Sending image");
+    if (socket && selectedDevice && webcamRef.current) {
+      const newImageSrc = webcamRef.current.getScreenshot();
+
+      fetch(newImageSrc)
+        .then((response) => response.blob())
+        .then((blob) => {
+          if (blob.size > 0) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const imageData = event.target.result;
+              socket.emit("image", imageData); // Enviar la cadena base64
+            };
+            reader.readAsDataURL(blob);
+          } else {
+            console.warn("Image blob is empty");
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending image:", error);
+        });
     }
   };
 
@@ -75,13 +96,22 @@ const CameraConnectScreen = () => {
           />
         </View>
       ) : (
-        <View>
-          <Webcam audio={false} videoConstraints={{ deviceId: selectedDevice }} ref={webcamRef} />
-          <Button title="Enviar Imagen" onPress={handleSendImage} />
+        <View style={styles.webcamContainer}>
+          <Webcam
+            audio={false}
+            videoConstraints={{ deviceId: selectedDevice }}
+            ref={webcamRef}
+          />
         </View>
       )}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  webcamContainer: {
+    flex: 1,
+  },
+});
 
 export default CameraConnectScreen;
