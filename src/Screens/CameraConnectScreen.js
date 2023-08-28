@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
-import { View, Picker, Button, StyleSheet } from "react-native";
+import { View, Picker, Button, StyleSheet, Text } from "react-native";
 import io from "socket.io-client";
 
 const CameraConnectScreen = () => {
@@ -8,7 +8,7 @@ const CameraConnectScreen = () => {
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
-  const [imageSrc, setImageSrc] = useState("");
+  const [suspiciousActivity, setSuspiciousActivity] = useState(false);
 
   const webcamRef = useRef(null);
 
@@ -33,9 +33,15 @@ const CameraConnectScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      // Manejar el evento de predicción recibida
       socket.on("prediction", (response) => {
-        console.log("Prediction received:", response); // Mostrar la predicción por consola
+        console.log("Prediction received:", response);
+
+        // Verificar si el class_index es diferente de 3
+        if (response.class_index !== 3) {
+          setSuspiciousActivity(true);
+        } else {
+          setSuspiciousActivity(false);
+        }
       });
     }
   }, [socket]);
@@ -102,6 +108,11 @@ const CameraConnectScreen = () => {
             videoConstraints={{ deviceId: selectedDevice }}
             ref={webcamRef}
           />
+          {suspiciousActivity && (
+            <Text style={styles.suspiciousMessage}>
+              ¡Actividad sospechosa detectada!
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -111,6 +122,12 @@ const CameraConnectScreen = () => {
 const styles = StyleSheet.create({
   webcamContainer: {
     flex: 1,
+  },
+  suspiciousMessage: {
+    color: "red",
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 10,
   },
 });
 
