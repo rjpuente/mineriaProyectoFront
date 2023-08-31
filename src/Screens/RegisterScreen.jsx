@@ -1,58 +1,52 @@
-import React, { useContext, useState } from 'react'
-import { View, Text, TextInput, StyleSheet, Pressable, TouchableOpacity, Keyboard } from 'react-native'
-import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
+import React, { useState } from 'react'
+import { View, Text, TextInput, StyleSheet, Pressable, TouchableOpacity } from 'react-native'
 import { CheckBox, Icon } from 'react-native-elements'
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
 import Constants from 'expo-constants'
-import { useFormik } from 'formik'
-import * as yup from 'yup'
 
-import { AuthContext } from '../context/AuthContext'
 import { useTogglePasswordVisibility } from '../hooks/useTogglePassVisibility'
 import { COLORS } from '../constants'
-import { StatusBar } from 'expo-status-bar'
-
-const validationSchema = yup.object().shape({
-  username: yup.string().required('El usuario es requerido'),
-  email: yup.string().email('Correo electrónico inválido').required('El correo electrónico es requerido'),
-  password: yup.string().min(8, 'La contraseña debe tener al menos 8 caracteres').required('La contraseña es requerida')
-})
+import firebase from '../../database/firebase'
 
 const RegisterScreen = ({ navigation }) => {
-  const { register } = useContext(AuthContext)
-  const [isSelected, setSelection] = useState(true)
-  const formik = useFormik({
-    initialValues: {
-      username: '',
-      email: '',
-      password: '',
-      isSelected: true
-    },
-    validationSchema,
-    onSubmit: values => {
-      register(
-        {
-          username: values.username,
-          email: values.email,
-          password: values.password
-        }
-      )
-    }
-  })
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const { passwordVisibility, rightIcon, handlePasswordVisibility } = useTogglePasswordVisibility()
+  const [isSelected, setSelection] = useState(true);
+  const toggleCheckbox = () => setSelection(!isSelected)
 
-  const { handleChange, handleBlur, handleSubmit, values, errors, touched } = formik
-
-  const toggleCheckbox = () => {
-    formik.setFieldValue('isSelected', !values.isSelected)
-  }
-
-  const handleRegisterButtonPress = () => {
-    Keyboard.dismiss()
-    if(isSelected){
-      formik. handleSubmit()
+  const handleRegister = async () => {
+    try {
+      if (email === '' || password === '' || username === '') {
+        console.log('Error', 'Completa todos los campos.');
+        return;
+      }
+  
+      const existingUserSnapshot = await firebase.db
+        .collection('users')
+        .where('email', '==', email)
+        .get();
+  
+      if (!existingUserSnapshot.empty) {
+        console.log('Error', 'Ya existe un usuario con este correo electrónico.');
+        return;
+      }
+  
+      await firebase.db.collection('users').add({
+        email: email,
+        password: password,
+        username: username
+      });
+  
+      console.log('Registro exitoso');
+      navigation.navigate('Login');
+    } catch (error) {
+      console.log('Error', 'Ocurrió un error al registrarse.', error);
     }
-  }
+  };
 
   const handleBackLogin = () => {
     navigation.navigate('Login');
@@ -69,9 +63,8 @@ const RegisterScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder='Ingrese un nombre de usuario'
-            onChangeText={handleChange('username')}
-            onBlur={handleBlur('username')}
-            value={values.username}
+            onChangeText={setUsername}
+            value={username}
           />
         </View>
 
@@ -81,9 +74,8 @@ const RegisterScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder='Ingrese su correo'
-            onChangeText={handleChange('email')}
-            onBlur={handleBlur('email')}
-            value={values.email}
+            onChangeText={setEmail}
+            value={email}
           />
         </View>
 
@@ -91,16 +83,14 @@ const RegisterScreen = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <Icon style={styles.searchIcon} name='lock-open' />
           <TextInput
-            id='clave1'
             style={styles.input}
             placeholder='Ingrese su contraseña'
             autoCapitalize='none'
             autoCorrect={false}
             secureTextEntry={passwordVisibility}
-            enablesReturnKeyAutomatically
-            onChangeText={handleChange('password')}
-            onBlur={handleBlur('password')}
-            value={values.password}
+            /* enablesReturnKeyAutomatically */
+            onChangeText={setPassword}
+            value={password}
           />
           <Pressable style={styles.iconEyeButton} onPress={handlePasswordVisibility}>
             <MaterialCommunityIcons name={rightIcon} size={22} style={styles.icono} color='#232323' />
@@ -109,7 +99,7 @@ const RegisterScreen = ({ navigation }) => {
 
         <View style={styles.condiciones}>
           <CheckBox
-            checked={values.isSelected}
+            checked={isSelected}
             onPress={toggleCheckbox}
             iconType='material-community'
             checkedIcon='checkbox-marked'
@@ -127,15 +117,9 @@ const RegisterScreen = ({ navigation }) => {
           />
         </View>
 
-        <TouchableOpacity style={[styles.bregistrarse, {opacity: values.isSelected ? 1 :0.5}]} onPress={handleRegisterButtonPress} disabled={!values.isSelected}>
+        <TouchableOpacity style={[styles.bregistrarse, {opacity: isSelected ? 1 :0.5}]} onPress={handleRegister} disabled={!isSelected}>
           <Text style={{ color: 'white' }}>Registrarse</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.errorContainer}>
-        {touched.username && errors.username && <Text style={styles.error}>* {errors.username}</Text>}
-        {touched.email && errors.email && <Text style={styles.error}>* {errors.email}</Text>}
-        {touched.password && errors.password && <Text style={styles.error}>* {errors.password}</Text>}
       </View>
 
       <View style={styles.final}>
