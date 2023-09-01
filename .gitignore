@@ -1,1 +1,7 @@
 node_modules
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+.expo/web/cache/development/babel-loader/

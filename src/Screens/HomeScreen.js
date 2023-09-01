@@ -4,7 +4,7 @@ import { View, Picker, Button, StyleSheet, Text } from "react-native";
 import io from "socket.io-client";
 import axios from 'axios';
 
-const CameraConnectScreen = () => {
+const HomeScreen = () => {
   const [connected, setConnected] = useState(false);
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
@@ -158,4 +158,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CameraConnectScreen;
+export default HomeScreen;

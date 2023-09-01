@@ -4,8 +4,9 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import HomeScreen from '../screens/HomeScreen';
+import HomeScreen from '../Screens/HomeScreen'
 import CameraDetailsScreen from '../screens/CameraDetailsScreen';
+import SuspiciusActivityScreen from '../Screens/SuspiciousActivityScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -17,6 +18,7 @@ const Navigation = () => {
         <Stack.Screen name="Home" component={MainScreenStack} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="Activity" component={SuspiciusActivityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -30,8 +32,8 @@ const MainScreenStack = () => {
         component={HomeScreen}
       />
       <Tab.Screen
-        name="CameraDetails"
-        component={CameraDetailsScreen}
+        name="Actividades Sospechosas"
+        component={SuspiciusActivityScreen}
       />
     </Tab.Navigator>
   );
