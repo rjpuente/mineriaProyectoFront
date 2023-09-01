@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Webcam from "react-webcam";
 import { View, Picker, Button, StyleSheet, Text } from "react-native";
 import io from "socket.io-client";
+import axios from 'axios';
 
 const CameraConnectScreen = () => {
   const [connected, setConnected] = useState(false);
@@ -9,6 +10,7 @@ const CameraConnectScreen = () => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
+  const registrationToken = 'fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg'; 
 
   const webcamRef = useRef(null);
 
@@ -33,13 +35,25 @@ const CameraConnectScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      socket.on("prediction", (response) => {
+      socket.on("prediction", async (response) => {
         console.log("Prediction received:", response);
-
+        const clase = response.class_index
         // Verificar si el class_index es diferente de 3
         if (response.class_index == 3 ||  response.class_index == 6) {
           setSuspiciousActivity(false);
         } else {
+          const notificationData = {
+            token: registrationToken,
+            title: 'Evento detectado',
+            body: 'Se ha detectado un evento sospechoso',
+            categoria: response.class_index
+          };
+          try {
+            const response = await axios.post('http://localhost:3000/send-notification', notificationData);
+            console.log('Notification sent:', response.data.message);
+          } catch (error) {
+            console.error('Error sending notification:', error);
+          }
           setSuspiciousActivity(true);
         }
       });
