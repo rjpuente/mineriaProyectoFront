@@ -116,12 +116,14 @@ const HomeScreen = () => {
           />
         </View>
       ) : (
+        <View style={styles.container}>
         <View style={styles.webcamContainer}>
           <Webcam
             audio={false}
             videoConstraints={{ deviceId: selectedDevice }}
             ref={webcamRef}
           />
+        </View>
           {suspiciousActivity && (
             <View style={styles.popup}>
               <Text style={styles.suspiciousMessage}>
@@ -139,8 +141,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  container: {
+    flex: 1, // Esto asegura que el contenedor ocupe toda la pantalla
+    justifyContent: 'center', // Centra verticalmente
+    alignItems: 'center', // Centra horizontalmente
+  },
   webcamContainer: {
     flex: 1,
+    width: 780,
+
   },
   popup: {
     position: "absolute",
