@@ -19,7 +19,7 @@ class SuspiciusActivityScreen extends Component {
 
   cargarActividades = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/actividades-sospechosas');
+      const response = await axios.get('https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/actividades-sospechosas');
       
       // Verificar si response.data es un objeto
       if (typeof response.data === 'object' && Object.keys(response.data).length > 0) {
@@ -39,7 +39,7 @@ class SuspiciusActivityScreen extends Component {
                 categoria = 'Robo';
                 break;
             case 5:
-              categoria = 'Robo';
+              categoria = 'Disparos';
               break;
             case 7:
               categoria = 'Vandalismo';

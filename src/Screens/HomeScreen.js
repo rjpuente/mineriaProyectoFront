@@ -10,7 +10,8 @@ const HomeScreen = () => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
-  const registrationToken = 'fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg'; 
+  const registrationToken1 = 'fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg'; 
+  const registrationToken2 = 'eOXMWqQiR9yyNQjAR3YszP:APA91bE1hVISel447vDx2_6IB9tCEpbO1AlfpzgEQl9s-P8dQKCu8PCHtidCSE2kig1ys41kFJHad21W1EzVRxN12yOF8mcrhOrqB-JbVTXMJuHXA3QyqfilHqv9P2f_6aoAPs4ZytML';
 
   const webcamRef = useRef(null);
 
@@ -25,7 +26,7 @@ const HomeScreen = () => {
     if (socket) {
       const imageSendingInterval = setInterval(() => {
         handleSendImage();
-      }, 5000);
+      }, 4000);
 
       return () => {
         clearInterval(imageSendingInterval);
@@ -43,13 +44,13 @@ const HomeScreen = () => {
           setSuspiciousActivity(false);
         } else {
           const notificationData = {
-            token: registrationToken,
+            tokens: [registrationToken1,registrationToken2],
             title: 'Evento detectado',
             body: 'Se ha detectado un evento sospechoso',
             categoria: response.class_index
           };
           try {
-            const response = await axios.post('http://localhost:3000/send-notification', notificationData);
+            const response = await axios.post('https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification', notificationData);
             console.log('Notification sent:', response.data.message);
           } catch (error) {
             console.error('Error sending notification:', error);
@@ -62,7 +63,7 @@ const HomeScreen = () => {
 
   const handleConnect = () => {
     setConnected(true);
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io("http://192.168.0.69:5000");
     setSocket(newSocket);
     console.log("Connected successfully", newSocket);
   };
