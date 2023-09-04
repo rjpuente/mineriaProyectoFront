@@ -64,7 +64,7 @@ const HomeScreen = () => {
 
             try {
               const response = await axios.post(
-                "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification",
+                "http://192.168.0.69:3000",
                 notificationData
               );
               console.log("Notification sent:", response.data.message);
