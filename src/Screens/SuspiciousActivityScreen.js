@@ -38,6 +38,9 @@ class SuspiciusActivityScreen extends Component {
             case 4:
                 categoria = 'Robo';
                 break;
+            case 3: 
+                categoria = 'Robo a casas';
+                break;
             case 5:
               categoria = 'Disparos';
               break;
