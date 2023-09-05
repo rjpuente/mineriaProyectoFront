@@ -59,7 +59,7 @@ const HomeScreen = () => {
 
   const handleConnect = () => {
     setConnected(true);
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io("http://192.168.0.92:5000");
     setSocket(newSocket);
     console.log("Connected successfully", newSocket);
   };
