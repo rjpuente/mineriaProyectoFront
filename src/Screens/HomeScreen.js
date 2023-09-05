@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import Webcam from "react-webcam";
-import { View, Picker, Button, StyleSheet, Text } from "react-native";
+import { View, TextInput, Button, StyleSheet, Text, Image } from "react-native";
 import io from "socket.io-client";
-import axios from "axios";
 
 const HomeScreen = () => {
   const [connected, setConnected] = useState(false);
@@ -10,6 +8,10 @@ const HomeScreen = () => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
+  const [imageData, setImageData] = useState(null);
+  const VIDEO_WIDTH = 1280; // Ancho en píxeles
+  const VIDEO_HEIGHT = 720; // Alto en píxeles
+
   const registrationToken1 =
     "fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg";
   const registrationToken2 =
@@ -18,6 +20,21 @@ const HomeScreen = () => {
   let isSendingNotification = false;
 
   const webcamRef = useRef(null);
+
+  const [cameraInfo, setCameraInfo] = useState({
+    usuario: "",
+    contrasena: "",
+    ip: "",
+    port: "",
+    numCameras: 0,
+  });
+
+  const handleInputChange = (field, value) => {
+    setCameraInfo({
+      ...cameraInfo,
+      [field]: value,
+    });
+  };
 
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then((devices) => {
@@ -28,63 +45,21 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      const imageSendingInterval = setInterval(() => {
-        handleSendImage();
-      }, 500);
-
-      return () => {
-        clearInterval(imageSendingInterval);
-      };
+      handleConnectCamera();
     }
   }, [socket]);
 
   useEffect(() => {
     if (socket) {
-      socket.on("prediction", async (response) => {
-        console.log("Prediction received:", response);
-        const clase = response.class_index;
-        // Verificar si el class_index es diferente de 6
-        if (response.class_index == 6) {
-          if (!isSendingNotification) {
-            setTimeout(() => {
-              isSendingNotification = false;
-            }, 6000); // Espera 5 segundos antes de permitir el próximo envío
-            setSuspiciousActivity(false);
-          }
-        } else {
-          if (!isSendingNotification) {
-            isSendingNotification = true;
-
-            const notificationData = {
-              tokens: [registrationToken1, registrationToken2],
-              title: "Evento detectado",
-              body: "Se ha detectado un evento sospechoso",
-              categoria: response.class_index,
-            };
-
-            try {
-              const response = await axios.post(
-                "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification",
-                notificationData
-              );
-              console.log("Notification sent:", response.data.message);
-            } catch (error) {
-              console.error("Error sending notification:", error);
-            }
-
-            setTimeout(() => {
-              isSendingNotification = false;
-            }, 6000); // Espera 5 segundos antes de permitir el próximo envío
-            setSuspiciousActivity(true);
-          }
-        }
+      socket.on("camera_feed", (data) => {
+        setImageData(data.image);
       });
     }
   }, [socket]);
 
   const handleConnect = () => {
     setConnected(true);
-    const newSocket = io("http://192.168.0.69:5000");
+    const newSocket = io("http://localhost:5000");
     setSocket(newSocket);
     console.log("Connected successfully", newSocket);
   };
@@ -114,44 +89,87 @@ const HomeScreen = () => {
     }
   };
 
+  const handleDisconnectCamera = () => {
+    if (socket) {
+      socket.emit("disconnect_camera");
+      setConnected(false); // Actualiza el estado de la cámara
+    }
+  };
+
+  const handleConnectCamera = () => {
+    console.log("Conectando la camara");
+    if (socket) {
+      socket.emit(
+        "connect_camera",
+        cameraInfo.usuario,
+        cameraInfo.contrasena,
+        cameraInfo.ip,
+        cameraInfo.port,
+        cameraInfo.numCameras
+      );
+    }
+  };
+
   return (
-    <View>
+    <View style={styles.container}>
       {!connected ? (
-        <View>
-          <Picker
-            selectedValue={selectedDevice}
-            onValueChange={(value) => setSelectedDevice(value)}
-          >
-            <Picker.Item label="Seleccionar cámara" value="" />
-            {devices.map((device) => (
-              <Picker.Item
-                key={device.deviceId}
-                label={device.label || `Cámara ${device.deviceId}`}
-                value={device.deviceId}
-              />
-            ))}
-          </Picker>
+        <View style={styles.formContainer}>
+          <Text>Usuario:</Text>
+          <TextInput
+            style={styles.input}
+            value={cameraInfo.usuario}
+            onChangeText={(text) => handleInputChange("usuario", text)}
+          />
+          <Text>Contraseña:</Text>
+          <TextInput
+            style={styles.input}
+            value={cameraInfo.contrasena}
+            onChangeText={(text) => handleInputChange("contrasena", text)}
+          />
+          <Text>IP:</Text>
+          <TextInput
+            style={styles.input}
+            value={cameraInfo.ip}
+            onChangeText={(text) => handleInputChange("ip", text)}
+          />
+          <Text>Puerto:</Text>
+          <TextInput
+            style={styles.input}
+            value={cameraInfo.port}
+            onChangeText={(text) => handleInputChange("port", text)}
+          />
+          <Text>Cantidad de cámaras:</Text>
+          <TextInput
+            style={styles.input}
+            value={cameraInfo.numCameras}
+            onChangeText={(text) => handleInputChange("numCameras", text)}
+            keyboardType="numeric"
+          />
           <Button
             title="Conectar a la cámara"
             onPress={handleConnect}
-            disabled={!selectedDevice}
+            disabled={
+              !cameraInfo.usuario ||
+              !cameraInfo.contrasena ||
+              !cameraInfo.ip ||
+              !cameraInfo.port ||
+              !cameraInfo.numCameras
+            }
           />
         </View>
       ) : (
         <View style={styles.container}>
-          <View style={styles.webcamContainer}>
-            <Webcam
-              audio={false}
-              videoConstraints={{ deviceId: selectedDevice }}
-              ref={webcamRef}
+          {imageData && (
+            <Image
+              source={{ uri: `data:image/jpeg;base64, ${imageData}` }}
+              style={{ width: VIDEO_WIDTH, height: VIDEO_HEIGHT }}
             />
-          </View>
-          {suspiciousActivity && (
-            <View style={styles.popup}>
-              <Text style={styles.suspiciousMessage}>
-                ¡Actividad sospechosa detectada!
-              </Text>
-            </View>
+          )}
+          {connected && ( // Mostrar el botón de desconexión solo si la cámara está conectada
+            <Button
+              title="Desconectar Cámara"
+              onPress={handleDisconnectCamera}
+            />
           )}
         </View>
       )}
@@ -162,11 +180,17 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  container: {
-    flex: 1, // Esto asegura que el contenedor ocupe toda la pantalla
-    justifyContent: "center", // Centra verticalmente
-    alignItems: "center", // Centra horizontalmente
+  formContainer: {
+    width: "80%", // Ajusta el ancho del formulario al 80% del contenedor principal
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "gray",
+    marginBottom: 10,
+    padding: 5,
   },
   webcamContainer: {
     flex: 1,
