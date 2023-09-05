@@ -1,25 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, TextInput, Button, StyleSheet, Text, Image } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  TextInput,
+  Button,
+  StyleSheet,
+  Text,
+  Image,
+  Dimensions,
+  FlatList,
+} from "react-native";
 import io from "socket.io-client";
 
 const HomeScreen = () => {
   const [connected, setConnected] = useState(false);
-  const [devices, setDevices] = useState([]);
-  const [selectedDevice, setSelectedDevice] = useState("");
   const [socket, setSocket] = useState(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
-  const [imageData, setImageData] = useState(null);
+  const [imageDataList, setImageDataList] = useState([]);
   const VIDEO_WIDTH = 1280; // Ancho en píxeles
   const VIDEO_HEIGHT = 720; // Alto en píxeles
+  const windowWidth = Dimensions.get("window").width; // Ancho de la ventana
 
   const registrationToken1 =
     "fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg";
   const registrationToken2 =
     "eOXMWqQiR9yyNQjAR3YszP:APA91bE1hVISel447vDx2_6IB9tCEpbO1AlfpzgEQl9s-P8dQKCu8PCHtidCSE2kig1ys41kFJHad21W1EzVRxN12yOF8mcrhOrqB-JbVTXMJuHXA3QyqfilHqv9P2f_6aoAPs4ZytML";
-
-  let isSendingNotification = false;
-
-  const webcamRef = useRef(null);
 
   const [cameraInfo, setCameraInfo] = useState({
     usuario: "",
@@ -52,7 +56,9 @@ const HomeScreen = () => {
   useEffect(() => {
     if (socket) {
       socket.on("camera_feed", (data) => {
-        setImageData(data.image);
+        const updatedImageDataList = [...imageDataList];
+        updatedImageDataList.push(data.image);
+        setImageDataList(updatedImageDataList);
       });
     }
   }, [socket]);
@@ -64,31 +70,6 @@ const HomeScreen = () => {
     console.log("Connected successfully", newSocket);
   };
 
-  const handleSendImage = () => {
-    console.log("Sending image");
-    if (socket && selectedDevice && webcamRef.current) {
-      const newImageSrc = webcamRef.current.getScreenshot();
-
-      fetch(newImageSrc)
-        .then((response) => response.blob())
-        .then((blob) => {
-          if (blob.size > 0) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const imageData = event.target.result;
-              socket.emit("image", imageData); // Enviar la cadena base64
-            };
-            reader.readAsDataURL(blob);
-          } else {
-            console.warn("Image blob is empty");
-          }
-        })
-        .catch((error) => {
-          console.error("Error sending image:", error);
-        });
-    }
-  };
-
   const handleDisconnectCamera = () => {
     if (socket) {
       socket.emit("disconnect_camera");
@@ -97,7 +78,7 @@ const HomeScreen = () => {
   };
 
   const handleConnectCamera = () => {
-    console.log("Conectando la camara");
+    console.log("Conectando las cámaras");
     if (socket) {
       socket.emit(
         "connect_camera",
@@ -109,6 +90,13 @@ const HomeScreen = () => {
       );
     }
   };
+
+  // Calcula el tamaño de cada cámara en función del número de cámaras y el tamaño de la ventana
+  const cameraWidth = windowWidth / cameraInfo.numCameras;
+  const cameraHeight = (cameraWidth * VIDEO_HEIGHT) / VIDEO_WIDTH;
+
+  // Calcula el número de columnas en función del número de cámaras
+  const numColumns = cameraInfo.numCameras;
 
   return (
     <View style={styles.container}>
@@ -159,13 +147,22 @@ const HomeScreen = () => {
         </View>
       ) : (
         <View style={styles.container}>
-          {imageData && (
-            <Image
-              source={{ uri: `data:image/jpeg;base64, ${imageData}` }}
-              style={{ width: VIDEO_WIDTH, height: VIDEO_HEIGHT }}
-            />
-          )}
-          {connected && ( // Mostrar el botón de desconexión solo si la cámara está conectada
+          <FlatList
+            data={imageDataList}
+            numColumns={numColumns}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <Image
+                source={{ uri: `data:image/jpeg;base64, ${item}` }}
+                style={{
+                  width: cameraWidth,
+                  height: cameraHeight,
+                  margin: 5,
+                }}
+              />
+            )}
+          />
+          {connected && (
             <Button
               title="Desconectar Cámara"
               onPress={handleDisconnectCamera}
@@ -184,7 +181,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   formContainer: {
-    width: "80%", // Ajusta el ancho del formulario al 80% del contenedor principal
+    width: "60%",
+  },
+  cameraGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
   },
   input: {
     borderWidth: 1,
