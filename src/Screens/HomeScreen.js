@@ -19,6 +19,9 @@ const HomeScreen = () => {
   const VIDEO_WIDTH = 1280; // Ancho en píxeles
   const VIDEO_HEIGHT = 720; // Alto en píxeles
   const windowWidth = Dimensions.get("window").width; // Ancho de la ventana
+  const NUM_CAMERAS_PER_ROW = 2; // Número de cámaras por fila
+  const CAMERA_WIDTH = windowWidth / NUM_CAMERAS_PER_ROW;
+  const CAMERA_HEIGHT = (CAMERA_WIDTH * VIDEO_HEIGHT) / VIDEO_WIDTH;
 
   const registrationToken1 =
     "fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg";
@@ -39,13 +42,6 @@ const HomeScreen = () => {
       [field]: value,
     });
   };
-
-  useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const cameras = devices.filter((device) => device.kind === "videoinput");
-      setDevices(cameras);
-    });
-  }, []);
 
   useEffect(() => {
     if (socket) {
@@ -149,14 +145,14 @@ const HomeScreen = () => {
         <View style={styles.container}>
           <FlatList
             data={imageDataList}
-            numColumns={numColumns}
+            numColumns={NUM_CAMERAS_PER_ROW}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({ item }) => (
               <Image
                 source={{ uri: `data:image/jpeg;base64, ${item}` }}
                 style={{
-                  width: cameraWidth,
-                  height: cameraHeight,
+                  width: CAMERA_WIDTH,
+                  height: CAMERA_HEIGHT,
                   margin: 5,
                 }}
               />
