@@ -34,6 +34,7 @@ const HomeScreen = () => {
     ip: "",
     port: "",
     numCameras: 0,
+    cameraToConnect: 0,
   });
 
   const handleInputChange = (field, value) => {
@@ -55,6 +56,12 @@ const HomeScreen = () => {
         const updatedImageDataList = [...imageDataList];
         updatedImageDataList.push(data.image);
         setImageDataList(updatedImageDataList);
+
+        console.log("Prediction recived", data.prediction);
+        const clase = data.class_index;
+        const probabilidad = data.class_confidence;
+
+        socket.emit("sendImage", data.image);
       });
     }
   }, [socket]);
@@ -82,7 +89,8 @@ const HomeScreen = () => {
         cameraInfo.contrasena,
         cameraInfo.ip,
         cameraInfo.port,
-        cameraInfo.numCameras
+        cameraInfo.numCameras,
+        cameraInfo.cameraToConnect
       );
     }
   };
@@ -129,15 +137,22 @@ const HomeScreen = () => {
             onChangeText={(text) => handleInputChange("numCameras", text)}
             keyboardType="numeric"
           />
+          {cameraInfo.numCameras === "1" && (
+            <Text>Camara a la que desea conectarse</Text>,
+            <TextInput
+              style={styles.input}
+              value={cameraInfo.cameraToConnect}
+              onChangeText={(text) =>
+                handleInputChange("cameraToConnect", text)
+              }
+              keyboardType="numeric"
+            />
+          )}
           <Button
             title="Conectar a la cámara"
             onPress={handleConnect}
             disabled={
-              !cameraInfo.usuario ||
-              !cameraInfo.contrasena ||
-              !cameraInfo.ip ||
-              !cameraInfo.port ||
-              !cameraInfo.numCameras
+              !cameraInfo.ip || !cameraInfo.port || !cameraInfo.numCameras
             }
           />
         </View>
