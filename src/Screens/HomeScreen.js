@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   TextInput,
@@ -8,14 +8,20 @@ import {
   Image,
   Dimensions,
   FlatList,
+  Picker,
 } from "react-native";
+import Webcam from "react-webcam";
 import io from "socket.io-client";
+import axios from "axios";
 
 const HomeScreen = () => {
   const [connected, setConnected] = useState(false);
   const [socket, setSocket] = useState(null);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
   const [imageDataList, setImageDataList] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState(
+    "b188d8b180c5cfef42c9b8e1a225a0590f77d1bf58b15571c2b19f10b37e0da2"
+  );
   const VIDEO_WIDTH = 1280; // Ancho en píxeles
   const VIDEO_HEIGHT = 720; // Alto en píxeles
   const windowWidth = Dimensions.get("window").width; // Ancho de la ventana
@@ -27,6 +33,9 @@ const HomeScreen = () => {
     "fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg";
   const registrationToken2 =
     "eOXMWqQiR9yyNQjAR3YszP:APA91bE1hVISel447vDx2_6IB9tCEpbO1AlfpzgEQl9s-P8dQKCu8PCHtidCSE2kig1ys41kFJHad21W1EzVRxN12yOF8mcrhOrqB-JbVTXMJuHXA3QyqfilHqv9P2f_6aoAPs4ZytML";
+
+  let isSendingNotification = false;
+  const webcamRef = useRef(null);
 
   const [cameraInfo, setCameraInfo] = useState({
     usuario: "",
@@ -46,7 +55,16 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      handleConnectCamera();
+      if (cameraInfo.ip.includes("192")) {
+        const imageSendingInterval = setInterval(() => {
+          handleSendImage();
+        }, 500);
+        return () => {
+          clearInterval(imageSendingInterval);
+        };
+      } else {
+        handleConnectCamera();
+      }
     }
   }, [socket]);
 
@@ -60,11 +78,57 @@ const HomeScreen = () => {
         console.log("Prediction recived", data.prediction);
         const clase = data.class_index;
         const probabilidad = data.class_confidence;
-
-        socket.emit("sendImage", data.image);
+        handleSendPredict(clase);
       });
     }
   }, [socket]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("prediction", async (response) => {
+        console.log("Prediction received:", response);
+        const clase = response.class_index;
+        // Verificar si el class_index es diferente de 6
+        handleSendPredict(clase);
+      });
+    }
+  }, [socket]);
+
+  const handleSendPredict = async (clase) => {
+    try {
+      if (clase === 6) {
+        if (!isSendingNotification) {
+          setTimeout(() => {
+            isSendingNotification = false;
+          }, 6000); // Espera 5 segundos antes de permitir el próximo envío
+          setSuspiciousActivity(false);
+        }
+      } else {
+        if (!isSendingNotification) {
+          isSendingNotification = true;
+          const notificationData = {
+            tokens: [registrationToken1, registrationToken2],
+            title: "Evento detectado",
+            body: "Se ha detectado un evento sospechoso",
+            categoria: clase, // ¡Asegúrate de que `response.class_index` esté definido!
+          };
+
+          const response = await axios.post(
+            "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification",
+            notificationData
+          );
+
+          console.log("Notification sent:", response.data.message);
+          setTimeout(() => {
+            isSendingNotification = false;
+          }, 6000); // Espera 5 segundos antes de permitir el próximo envío
+          setSuspiciousActivity(true);
+        }
+      }
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+  };
 
   const handleConnect = () => {
     setConnected(true);
@@ -92,6 +156,30 @@ const HomeScreen = () => {
         cameraInfo.numCameras,
         cameraInfo.cameraToConnect
       );
+    }
+  };
+
+  const handleSendImage = () => {
+    console.log("Sending image");
+    if (socket && selectedDevice && webcamRef.current) {
+      const newImageSrc = webcamRef.current.getScreenshot();
+      fetch(newImageSrc)
+        .then((response) => response.blob())
+        .then((blob) => {
+          if (blob.size > 0) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const imageData = event.target.result;
+              socket.emit("image", imageData); // Enviar la cadena base64
+            };
+            reader.readAsDataURL(blob);
+          } else {
+            console.warn("Image blob is empty");
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending image:", error);
+        });
     }
   };
 
@@ -137,23 +225,32 @@ const HomeScreen = () => {
             onChangeText={(text) => handleInputChange("numCameras", text)}
             keyboardType="numeric"
           />
-          {cameraInfo.numCameras === "1" && (
-            <Text>Camara a la que desea conectarse</Text>,
-            <TextInput
-              style={styles.input}
-              value={cameraInfo.cameraToConnect}
-              onChangeText={(text) =>
-                handleInputChange("cameraToConnect", text)
-              }
-              keyboardType="numeric"
-            />
-          )}
+          {cameraInfo.numCameras === "1" &&
+            ((<Text>Camara a la que desea conectarse</Text>),
+            (
+              <TextInput
+                style={styles.input}
+                value={cameraInfo.cameraToConnect}
+                onChangeText={(text) =>
+                  handleInputChange("cameraToConnect", text)
+                }
+                keyboardType="numeric"
+              />
+            ))}
           <Button
             title="Conectar a la cámara"
             onPress={handleConnect}
             disabled={
               !cameraInfo.ip || !cameraInfo.port || !cameraInfo.numCameras
             }
+          />
+        </View>
+      ) : cameraInfo.ip.includes("192") ? (
+        <View style={styles.webcamContainer}>
+          <Webcam
+            audio={false}
+            videoConstraints={{ deviceId: selectedDevice }}
+            ref={webcamRef}
           />
         </View>
       ) : (
