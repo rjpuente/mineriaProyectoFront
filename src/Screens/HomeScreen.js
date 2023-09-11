@@ -139,7 +139,7 @@ const HomeScreen = () => {
 
           setTimeout(() => {
             isSendingNotification = false;
-          }, 300000); // Espera 5 segundos antes de permitir el próximo envío
+          }, 60000); // Espera 5 segundos antes de permitir el próximo envío
           setSuspiciousActivity(true);
         }
       }
