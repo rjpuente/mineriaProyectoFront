@@ -22,6 +22,8 @@ const HomeScreen = () => {
   const [selectedDevice, setSelectedDevice] = useState(
     "b188d8b180c5cfef42c9b8e1a225a0590f77d1bf58b15571c2b19f10b37e0da2"
   );
+  const CONTROL_VALUE = "192";
+  const PROB_CONTROL = 0.71;
   const VIDEO_WIDTH = 1280; // Ancho en píxeles
   const VIDEO_HEIGHT = 720; // Alto en píxeles
   const windowWidth = Dimensions.get("window").width; // Ancho de la ventana
@@ -55,7 +57,7 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      if (cameraInfo.ip.includes("192")) {
+      if (cameraInfo.ip.includes(CONTROL_VALUE)) {
         const imageSendingInterval = setInterval(() => {
           handleSendImage();
         }, 500);
@@ -78,7 +80,7 @@ const HomeScreen = () => {
         console.log("Prediction recived", data.prediction);
         const clase = data.class_index;
         const probabilidad = data.class_confidence;
-        handleSendPredict(clase);
+        handleSendPredict(clase, probabilidad);
       });
     }
   }, [socket]);
@@ -88,19 +90,20 @@ const HomeScreen = () => {
       socket.on("prediction", async (response) => {
         console.log("Prediction received:", response);
         const clase = response.class_index;
+        const probabilidad = response.class_confidence;
         // Verificar si el class_index es diferente de 6
-        handleSendPredict(clase);
+        handleSendPredict(clase, probabilidad);
       });
     }
   }, [socket]);
 
-  const handleSendPredict = async (clase) => {
+  const handleSendPredict = async (clase, prob) => {
     try {
-      if (clase === 6) {
+      if (clase === 6 || prob <= PROB_CONTROL) {
         if (!isSendingNotification) {
           setTimeout(() => {
             isSendingNotification = false;
-          }, 6000); // Espera 5 segundos antes de permitir el próximo envío
+          }, 300000); // Espera 5 minutos antes de permitir el próximo envío
           setSuspiciousActivity(false);
         }
       } else {
@@ -110,7 +113,7 @@ const HomeScreen = () => {
             tokens: [registrationToken1, registrationToken2],
             title: "Evento detectado",
             body: "Se ha detectado un evento sospechoso",
-            categoria: clase, // ¡Asegúrate de que `response.class_index` esté definido!
+            categoria: clase,
           };
 
           const response = await axios.post(
@@ -119,10 +122,37 @@ const HomeScreen = () => {
           );
 
           console.log("Notification sent:", response.data.message);
+
           setTimeout(() => {
             isSendingNotification = false;
-          }, 6000); // Espera 5 segundos antes de permitir el próximo envío
+          }, 300000); // Espera 5 segundos antes de permitir el próximo envío
           setSuspiciousActivity(true);
+
+          if (selectedDevice && webcamRef.current) {
+            const newImageSrc = webcamRef.current.getScreenshot();
+            const response = await fetch(newImageSrc);
+            const blob = await response.blob();
+
+            if (blob.size > 0) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const imageData = event.target.result;
+
+                const image = {
+                  image: imageData,
+                };
+                const response2 = axios.post(
+                  "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/upload-image",
+                  image
+                );
+
+                console.log("Image sent:", response2.data.message);
+              };
+              reader.readAsDataURL(blob);
+            } else {
+              console.warn("Image blob is empty");
+            }
+          }
         }
       }
     } catch (error) {
@@ -141,6 +171,7 @@ const HomeScreen = () => {
     if (socket) {
       socket.emit("disconnect_camera");
       setConnected(false); // Actualiza el estado de la cámara
+      setSocket(false);
     }
   };
 
@@ -192,6 +223,13 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
+      {suspiciousActivity && (
+        <View style={styles.popup}>
+          <Text style={styles.suspiciousMessage}>
+            Se ha detectado una actividad sospechosa
+          </Text>
+        </View>
+      )}
       {!connected ? (
         <View style={styles.formContainer}>
           <Text>Usuario:</Text>
@@ -235,6 +273,7 @@ const HomeScreen = () => {
                   handleInputChange("cameraToConnect", text)
                 }
                 keyboardType="numeric"
+                placeholder="Camara a la que desea conectarse"
               />
             ))}
           <Button
@@ -245,13 +284,19 @@ const HomeScreen = () => {
             }
           />
         </View>
-      ) : cameraInfo.ip.includes("192") ? (
+      ) : cameraInfo.ip.includes(CONTROL_VALUE) ? (
         <View style={styles.webcamContainer}>
           <Webcam
             audio={false}
             videoConstraints={{ deviceId: selectedDevice }}
             ref={webcamRef}
           />
+          {connected && (
+            <Button
+              title="Desconectar Cámara"
+              onPress={handleDisconnectCamera}
+            />
+          )}
         </View>
       ) : (
         <View style={styles.container}>
@@ -304,6 +349,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   webcamContainer: {
+    position: "absolute",
     flex: 1,
     width: 780,
   },
