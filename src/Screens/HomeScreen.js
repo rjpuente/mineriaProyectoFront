@@ -79,15 +79,17 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (socket) {
-      socket.on("camera_feed", (data) => {
+      socket.on("camera_feed", async (data) => {
         const updatedImageDataList = [...imageDataList];
         updatedImageDataList.push(data.image);
         setImageDataList(updatedImageDataList);
 
-        // console.log("Prediction recived", data.prediction);
-        const clase = data.class_index;
-        const probabilidad = data.class_confidence;
-        handleSendPredict(clase, probabilidad);
+        console.log("Prediction recived", data.prediction);
+        const classIndex = data.prediction.class_index;
+        const classConfidence = data.prediction.class_confidence;
+
+        console.log("La clase es:", classIndex);
+        handleSendPredict(classIndex, classConfidence);
       });
     }
   }, [socket]);
@@ -106,7 +108,7 @@ const HomeScreen = () => {
 
   const handleSendPredict = async (clase, prob) => {
     try {
-      if (clase === 6 || prob <= PROB_CONTROL) {
+      if (clase === 6 || prob <= PROB_CONTROL || typeof clase === "undefined") {
         if (!isSendingNotification) {
           setTimeout(() => {
             isSendingNotification = false;
@@ -131,7 +133,6 @@ const HomeScreen = () => {
           if (start) {
             startRecording();
           } else {
-            
           }
 
           console.log("Notification sent:", response.data.message);
@@ -188,7 +189,6 @@ const HomeScreen = () => {
       );
 
       console.log("Notification sent:", response.data.message);
-
     }
   };
 
@@ -217,7 +217,7 @@ const HomeScreen = () => {
   };
 
   const startRecording = () => {
-    console.log("enviando video")
+    console.log("enviando video");
     if (webcamRef.current) {
       navigator.mediaDevices
         .getUserMedia({ video: true })
@@ -240,10 +240,13 @@ const HomeScreen = () => {
             const formData = new FormData();
             formData.append("video", videoFile);
 
-            fetch("https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/upload", {
-              method: "POST",
-              body: formData,
-            })
+            fetch(
+              "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/upload",
+              {
+                method: "POST",
+                body: formData,
+              }
+            )
               .then((response) => response.json())
               .then((data) => {
                 console.log(data.message); // Debería mostrar "Video guardado correctamente" desde el servidor
@@ -275,15 +278,14 @@ const HomeScreen = () => {
 
     setTimeout(() => {
       console.log(capturedImages);
-    }, 6000); 
-    
+    }, 6000);
   };
 
   const capturarImages = (image) => {
-    if(_recording){
+    if (_recording) {
       capturedImages.push(image);
-    } 
-  }
+    }
+  };
 
   // Calcula el tamaño de cada cámara en función del número de cámaras y el tamaño de la ventana
   const cameraWidth = windowWidth / cameraInfo.numCameras;
