@@ -33,9 +33,15 @@ const HomeScreen = () => {
     "fS3iQ0H_Rsu1uuILxtYhV9:APA91bEXLeq-bHbFVgiNGWIs0IckjFKYrjS1PArGr8tFDeFjBnqb49k_Za8Nw1ZkwltLzo06FWP7PJygKumUUcdoyiU8tvMlHghQ_AfJr5DPreT4kDweJ8zgNhGVVlvYib7aiMMB-qLg";
   const registrationToken2 =
     "eOXMWqQiR9yyNQjAR3YszP:APA91bE1hVISel447vDx2_6IB9tCEpbO1AlfpzgEQl9s-P8dQKCu8PCHtidCSE2kig1ys41kFJHad21W1EzVRxN12yOF8mcrhOrqB-JbVTXMJuHXA3QyqfilHqv9P2f_6aoAPs4ZytML";
-
+  const [recording, setRecording] = useState(false);
+  const chunks = [];
   let isSendingNotification = false;
   const webcamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const [capturedImages, setCapturedImages] = useState([]);
+  const [timer, setTimer] = useState(null);
+  let _recording = false;
+  let start = false;
 
   const [cameraInfo, setCameraInfo] = useState({
     usuario: "",
@@ -56,6 +62,7 @@ const HomeScreen = () => {
   useEffect(() => {
     if (socket) {
       if (cameraInfo.ip.includes("192")) {
+        start = true;
         const imageSendingInterval = setInterval(() => {
           handleSendImage();
         }, 500);
@@ -75,10 +82,11 @@ const HomeScreen = () => {
         updatedImageDataList.push(data.image);
         setImageDataList(updatedImageDataList);
 
-        console.log("Prediction recived", data.prediction);
+        // console.log("Prediction recived", data.prediction);
         const clase = data.class_index;
         const probabilidad = data.class_confidence;
         handleSendPredict(clase);
+        // capturarImages(data.image);
       });
     }
   }, [socket]);
@@ -114,9 +122,15 @@ const HomeScreen = () => {
           };
 
           const response = await axios.post(
-            "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification",
+            "http://localhost:3000/send-notification",
             notificationData
           );
+
+          if (start) {
+            startRecording();
+          } else {
+            
+          }
 
           console.log("Notification sent:", response.data.message);
           setTimeout(() => {
@@ -132,7 +146,7 @@ const HomeScreen = () => {
 
   const handleConnect = () => {
     setConnected(true);
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io("http://192.168.0.92:5000");
     setSocket(newSocket);
     console.log("Connected successfully", newSocket);
   };
@@ -144,7 +158,7 @@ const HomeScreen = () => {
     }
   };
 
-  const handleConnectCamera = () => {
+  const handleConnectCamera = async () => {
     console.log("Conectando las cámaras");
     if (socket) {
       socket.emit(
@@ -156,6 +170,21 @@ const HomeScreen = () => {
         cameraInfo.numCameras,
         cameraInfo.cameraToConnect
       );
+
+      const cameraData = {
+        user: cameraInfo.usuario,
+        password: cameraInfo.contrasena,
+        ip: cameraInfo.ip,
+        port: cameraInfo.port,
+      };
+
+      const response = await axios.post(
+        "http://localhost:3000/update-camera",
+        cameraData
+      );
+
+      console.log("Notification sent:", response.data.message);
+
     }
   };
 
@@ -182,6 +211,81 @@ const HomeScreen = () => {
         });
     }
   };
+
+  const startRecording = () => {
+    console.log("enviando video")
+    if (webcamRef.current) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          webcamRef.current.srcObject = stream;
+          mediaRecorderRef.current = new MediaRecorder(stream);
+
+          mediaRecorderRef.current.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+
+          mediaRecorderRef.current.onstop = () => {
+            const blob = new Blob(chunks, { type: "video/webm" });
+            const videoFile = new File([blob], `${Date.now()}.webm`, {
+              type: "video/webm",
+            });
+
+            const formData = new FormData();
+            formData.append("video", videoFile);
+
+            fetch("http://localhost:3000/upload", {
+              method: "POST",
+              body: formData,
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                console.log(data.message); // Debería mostrar "Video guardado correctamente" desde el servidor
+              })
+              .catch((error) => {
+                console.error("Error al enviar el video:", error);
+              });
+          };
+
+          mediaRecorderRef.current.start();
+          setTimeout(() => {
+            mediaRecorderRef.current.stop();
+            stream.getTracks().forEach((track) => track.stop());
+          }, 5000); // Grabar durante 5 segundos
+          setRecording(true);
+        })
+        .catch((error) => {
+          console.error("Error accessing webcam:", error);
+        });
+    }
+  };
+
+  const startRecording3 = () => {
+    _recording = true;
+
+    setTimeout(() => {
+      _recording = false;
+      console.log("La grabación se ha detenido.");
+    }, 5000); // 5000 milisegundos (5 segundos)
+
+    setTimeout(() => {
+      console.log("El valor de recording es:", recording);
+      console.log(capturedImages);
+    }, 6000); 
+    
+  };
+
+  const capturarImages = (image) => {
+    if(_recording){
+      console.log("adentro del if recorging");
+      capturedImages.push(image);
+    } else {
+      console.log("no estoy en el if" + _recording);
+      
+    }
+  }
 
   // Calcula el tamaño de cada cámara en función del número de cámaras y el tamaño de la ventana
   const cameraWidth = windowWidth / cameraInfo.numCameras;
@@ -246,13 +350,13 @@ const HomeScreen = () => {
           />
         </View>
       ) : cameraInfo.ip.includes("192") ? (
-        <View style={styles.webcamContainer}>
-          <Webcam
-            audio={false}
-            videoConstraints={{ deviceId: selectedDevice }}
-            ref={webcamRef}
-          />
-        </View>
+          <View style={styles.webcamContainer}>
+            <Webcam
+              audio={false}
+              videoConstraints={{ deviceId: selectedDevice }}
+              ref={webcamRef}
+            />
+          </View>
       ) : (
         <View style={styles.container}>
           <FlatList
