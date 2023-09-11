@@ -124,7 +124,7 @@ const HomeScreen = () => {
           };
 
           const response = await axios.post(
-            "http://localhost:3000/send-notification",
+            "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/send-notification",
             notificationData
           );
 
@@ -183,7 +183,7 @@ const HomeScreen = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:3000/update-camera",
+        "https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/update-camera",
         cameraData
       );
 
@@ -240,7 +240,7 @@ const HomeScreen = () => {
             const formData = new FormData();
             formData.append("video", videoFile);
 
-            fetch("http://localhost:3000/upload", {
+            fetch("https://verbose-dollop-g667rwgj9xwhwj6q-3000.app.github.dev/upload", {
               method: "POST",
               body: formData,
             })
